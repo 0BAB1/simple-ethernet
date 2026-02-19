@@ -22,6 +22,10 @@ async def test_preamble_detected(dut):
 
     await rgmii_source.send(b'aaa') #616161
 
-    await Timer(100,units="ns")
+    for i in range(3):
+        await RisingEdge(dut.rxc)
+
+    for i in range(3):
+        await RisingEdge(dut.rxc)
    
     cocotb.log.info("OK so far..")

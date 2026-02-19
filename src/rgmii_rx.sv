@@ -1,3 +1,9 @@
+// simple RGMII reciever module
+// can be simulated via cocotb by emulating the IDDR
+// targets 1G ethernet applications (125MHz DDR / 4bits)
+//
+// BRH 02/2025
+
 module rgmii_rx (
     // PHY => RGMII
     input  logic        rst,
