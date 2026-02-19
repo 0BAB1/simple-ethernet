@@ -20,7 +20,7 @@ async def test_preamble_detected(dut):
     # RgmiiSource pilote : rgmii_rxc, rgmii_rxd, rgmii_rx_ctl
     rgmii_source = RgmiiSource(dut.rxd, dut.rx_ctl, dut.rxc, dut.rst)
 
-    await rgmii_source.send(b'test data')
+    await rgmii_source.send(b'aaa') #616161
 
     await Timer(100,units="ns")
    

@@ -1,50 +1,39 @@
 module rgmii_rx (
-    // -------------------------------------------------------------------
-    // Pins physiques RGMII (vers/depuis le PHY)
-    // -------------------------------------------------------------------
-    input  logic rst,                    
-    input  logic        rxc,       // Horloge RX fournie par le PHY
-    input  logic [3:0]  rxd,       // Données RX 4 bits
-    input  logic        rx_ctl,    // RX_DV (front montant) + RX_ER^RX_DV (front descendant)
+    // PHY => RGMII
+    input  logic        rst,
+    input  logic        rxc,
+    input  logic [3:0]  rxd,
+    input  logic        rx_ctl,
 
-    // -------------------------------------------------------------------
-    // Interface logique interne (domaine clk_125)
-    // -------------------------------------------------------------------
-    output logic        clk_125,         // Horloge 125 MHz récupérée du PHY (RX)
+    // bufged clk
+    output logic        clk_125,
 
     // RX vers logique
-    output logic [7:0]  rx_data,         // Octet reçu (nibble haut + nibble bas reconstitués)
-    output logic        rx_dv,           // Data Valid
-    output logic        rx_er            // Error
+    output logic [7:0]  rx_data,
+    output logic        rx_dv,
+    output logic        rx_er
 );
 
-// =============================================================================
-// SECTION RX
-// =============================================================================
-
+// FOR COCOTB BEHAVIOR SIMULATION
 `ifdef SIMULATION
-    // Horloge simulée = RXC direct
-    assign clk_125    = rxc;
+    assign clk_125 = rxc;
 
-    // Capture des nibbles sur les deux fronts
     logic [3:0] rxd_rise, rxd_fall;
     logic       rxctl_rise, rxctl_fall;
 
-    // Front montant → nibble bas (bits 3:0)
+    // rising edge => low nibble
     always_ff @(posedge rxc) begin
         rxd_rise   <= rxd;
         rxctl_rise <= rx_ctl;
     end
 
-    // Front descendant → nibble haut (bits 7:4)
+    // falling edge => high nibble
     always_ff @(negedge rxc) begin
         rxd_fall   <= rxd;
         rxctl_fall <= rx_ctl;
     end
 
-    // Reconstitution de l'octet et des signaux de contrôle
-    // Note : on re-synchronise rxd_fall sur le front montant suivant
-    //        pour avoir rx_data stable dans le même domaine d'horloge
+    // control signal & output reconstitution in "SAME_EDGE_PIPELINED" mode
     logic [3:0] rxd_fall_sync;
     logic       rxctl_fall_sync;
 
@@ -53,24 +42,20 @@ module rgmii_rx (
         rxctl_fall_sync <= rxctl_fall;
     end
 
-    assign rx_data = {rxd_fall_sync, rxd_rise};   // [7:4]=fall, [3:0]=rise
+    assign rx_data = {rxd_fall_sync, rxd_rise};
     assign rx_dv   = rxctl_rise;
     assign rx_er   = rxctl_rise ^ rxctl_fall_sync; // RX_ER = RX_DV XOR ctl_fall
 
+// FOR KINTEX (KC705) synth
 `else
-    // -------------------------------------------------------------------------
-    // MODE SYNTHÈSE : primitives Xilinx Kintex-7
-    // -------------------------------------------------------------------------
 
-    // --- Horloge RX ---
-    // BUFG : buffer global d'horloge pour distribuer RXC sur tout le chip
+    // we gather the clock in fabric using bufg
     BUFG u_rxc_bufg (
         .I (rxc),
         .O (clk_125)
     );
 
-    // --- IDDR pour RXD[3:0] ---
-    // Q1 = front montant (nibble bas), Q2 = front descendant (nibble haut)
+    // IDDR to capture falling and rising edges of rxd[3:0]
     logic [3:0] rxd_rise, rxd_fall;
 
     genvar i;
@@ -84,7 +69,7 @@ module rgmii_rx (
             ) u_iddr_rxd (
                 .C  (clk_125),
                 .CE (1'b1),
-                .D  (rgmii_rxd[i]),
+                .D  (rxd[i]),
                 .R  (1'b0),
                 .S  (1'b0),
                 .Q1 (rxd_rise[i]),   // front montant
@@ -93,7 +78,7 @@ module rgmii_rx (
         end
     endgenerate
 
-    // --- IDDR pour RX_CTL ---
+    // IDDR to capture ctl signal
     logic rxctl_rise, rxctl_fall;
 
     IDDR #(
@@ -104,7 +89,7 @@ module rgmii_rx (
     ) u_iddr_rxctl (
         .C  (clk_125),
         .CE (1'b1),
-        .D  (rgmii_rx_ctl),
+        .D  (rx_ctl),
         .R  (1'b0),
         .S  (1'b0),
         .Q1 (rxctl_rise),
