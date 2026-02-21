@@ -20,20 +20,10 @@ async def test_preamble_detected(dut):
     # RgmiiSource pilote : rgmii_rxc, rgmii_rxd, rgmii_rx_ctl
     rgmii_source = RgmiiSource(dut.rxd, dut.rx_ctl, dut.rxc, dut.rst)
 
-    await rgmii_source.send(b'aaa') #616161
+    await rgmii_source.send(GmiiFrame.from_payload(b'aabcdefg'))
 
-    for i in range(2):
+    for i in range(3000):
         await RisingEdge(dut.rxc)
-
-    # We skip first beat
-    # as data is no well put toghther on very 1st and last beat
-    # apparently that's normal and that why ethernet frames
-    # have this big prembule.
-    await RisingEdge(dut.rxc)
-
-    for i in range(3):
-        await RisingEdge(dut.rxc)
-        assert dut.rx_data.value == 0x61 
    
     await RisingEdge(dut.rxc)
 

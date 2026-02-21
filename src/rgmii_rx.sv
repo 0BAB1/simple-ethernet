@@ -2,7 +2,7 @@
 // can be simulated via cocotb by emulating the IDDR
 // targets 1G ethernet applications (125MHz DDR / 4bits)
 //
-// BRH 02/2025
+// BRH 02/25
 
 module rgmii_rx (
     // PHY => RGMII
@@ -39,18 +39,9 @@ module rgmii_rx (
         rxctl_fall <= rx_ctl;
     end
 
-    // control signal & output reconstitution in "SAME_EDGE_PIPELINED" mode
-    logic [3:0] rxd_fall_sync;
-    logic       rxctl_fall_sync;
-
-    always_ff @(posedge rxc) begin
-        rxd_fall_sync   <= rxd_fall;
-        rxctl_fall_sync <= rxctl_fall;
-    end
-
-    assign rx_data = {rxd_fall_sync, rxd_rise};
+    assign rx_data = {rxd_fall, rxd_rise};
     assign rx_dv   = rxctl_rise;
-    assign rx_er   = rxctl_rise ^ rxctl_fall_sync; // RX_ER = RX_DV XOR ctl_fall
+    assign rx_er   = rxctl_rise ^ rxctl_fall; // RX_ER = RX_DV XOR ctl_fall
 
 // FOR KINTEX (KC705) synth
 `else

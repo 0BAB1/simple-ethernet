@@ -1,6 +1,6 @@
 module rgmmi_rx_wrapper (
     // PHY => RGMII
-    input  wire        rst,
+    input  wire        rst, // active high reset
     input  wire        rxc,
     input  wire [3:0]  rxd,
     input  wire        rx_ctl,
