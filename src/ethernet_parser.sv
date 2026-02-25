@@ -1,5 +1,6 @@
 // the role of this module is to grab the
 // incommig rx data and parse it for prcessing in fabric
+// A big buffer at the end isolates the CRC
 //
 // BRH 02/2025
 
@@ -18,8 +19,7 @@ module ethernet_parser (
 
     // FRAME DELIMITER 
     output logic frame_start,
-    output logic frame_done,
-    output logic frame_error,
+    output logic frame_last,
 
     // PARSED FRAME
     output logic [7:0] payload_data,
@@ -37,9 +37,17 @@ module ethernet_parser (
         PAYLOAD
     } eth_state;
 
+    typedef struct packed {
+        logic [7:0] data;
+        logic       valid;
+        logic       start;
+        logic       last;
+    } eth_payload_t;
+
     eth_state state, next_state;
     logic [2:0] mac_ptr;
     logic ethertype_ptr;
+    eth_payload_t payload_to_buffer;
 
     // STATE MACHINE SEQ LOGIC
     always_ff @(posedge clk125) begin
@@ -47,7 +55,6 @@ module ethernet_parser (
         ethertype_ptr <=0;
         if(~rst_n)begin
             state <= IDLE;
-            payload_data <= 8'h00;
         end else begin
             state <= next_state;
 
@@ -62,26 +69,23 @@ module ethernet_parser (
 
             // MAC LATCHING LOGIC
             if(state == DST_MAC)begin
-                dest_mac[mac_ptr*8 +: 8] <= rx_data;
+                dest_mac[47 - mac_ptr*8 -: 8] <= rx_data;
             end else if (state == SRC_MAC) begin
-                src_mac[mac_ptr*8 +: 8] <= rx_data;
+                src_mac[47 - mac_ptr*8 -: 8] <= rx_data;
             end
 
             // ETHER TYPE Logic
             if(state == ETHERTYPE) begin
                 ethertype_ptr <= ethertype_ptr + 1;
             end
-
-            // LATCH PAYLOAD PASSTRHOUGH
-            if(state == PAYLOAD) begin
-                payload_data <= rx_data;
-            end
         end
     end
 
     // ACTUAL STATE MACHINE
     always_comb begin : blockName
+        // default anti latch assignements
         next_state = state;
+        payload_to_buffer.data = 0;
 
         case (state)
             IDLE : begin
@@ -105,6 +109,8 @@ module ethernet_parser (
             end
 
             PAYLOAD : begin
+                // rx data passthrough
+                payload_to_buffer.data = rx_data;
                 next_state = rx_dv ? PAYLOAD : IDLE;
                 if(rx_er) next_state = IDLE;
             end
@@ -117,10 +123,45 @@ module ethernet_parser (
         if(~rx_dv) next_state = IDLE;
     end
 
-    // assignements
-    assign payload_valid = (state == PAYLOAD);
-    assign frame_start = (next_state == PAYLOAD) && (state==ETHERTYPE);
-    assign frame_done = state == PAYLOAD && next_state == IDLE;
-    assign frame_error = (state == PAYLOAD) && rx_er;
+    // BUFFER logic
+    assign payload_to_buffer.valid = (state == PAYLOAD);
+    assign payload_to_buffer.start = (next_state == PAYLOAD) && (state==ETHERTYPE);
+    assign payload_to_buffer.last = state == PAYLOAD && next_state == IDLE;
+
+    eth_payload_t payload_buffer_s1;
+    eth_payload_t payload_buffer_s2;
+    eth_payload_t payload_buffer_s3;
+    eth_payload_t payload_buffer_s4;
+
+    // 4 BYTES Buffer
+    always_ff @( posedge clk125 ) begin : buffer
+        if(~rst_n)begin
+            payload_buffer_s1 <= 0;
+            payload_buffer_s2 <= 0;
+            payload_buffer_s3 <= 0;
+            payload_buffer_s4 <= 0;
+        end else begin
+            payload_buffer_s1 <= payload_to_buffer;
+            payload_buffer_s2 <= payload_buffer_s1;
+            payload_buffer_s3 <= payload_buffer_s2;
+            payload_buffer_s4 <= payload_buffer_s3;
+        end
+    end
+
+    // BUFFER OUT MUX
+    // when the buffer detects frame end, it drops out CRC
+    always_comb begin
+        if(rx_dv && ~rx_er)begin
+            payload_data = payload_buffer_s4.data;
+            payload_valid = payload_buffer_s4.valid;
+            frame_start = payload_buffer_s4.start;
+            frame_last = payload_buffer_s4.last;
+        end else begin
+            payload_data = 0;
+            payload_valid = 0;
+            frame_start = 0;
+            frame_last = 1;
+        end
+    end
 
 endmodule

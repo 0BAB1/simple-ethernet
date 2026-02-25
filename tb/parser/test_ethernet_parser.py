@@ -20,7 +20,13 @@ async def test_preamble_detected(dut):
     # RgmiiSource pilote : rgmii_rxc, rgmii_rxd, rgmii_rx_ctl
     rgmii_source = RgmiiSource(dut.rxd, dut.rx_ctl, dut.rxc, dut.rst)
 
-    await rgmii_source.send(GmiiFrame.from_payload(b'aabcdefg'))
+    raw_data = bytes([
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  # dst MAC (broadcast)
+        0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01,  # src MAC
+        0x08, 0x00,                          # ethertype IPv4
+    ]) + b"ababab"
+
+    await rgmii_source.send(GmiiFrame.from_payload(raw_data))
 
     for i in range(3000):
         await RisingEdge(dut.rxc)

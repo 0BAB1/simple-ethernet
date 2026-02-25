@@ -1,27 +1,33 @@
+// used in vivado to wraper arround rgmii_rx and the parder
+// Takes in RGMII signals from PHY and output all the frame infos + AXI STREAM for data
+
 // this wraps the rgmii_rx AND parser.
 // That allows to use cocotb ext eth frames
 // fror testing directly
 //
 // BRH 2/2025
 
-module parser_wrapper (
+module mac_wrapper (
     // PHY => RGMII
-    input  logic        rst, // act high rst
-    input  logic        rxc,
-    input  logic [3:0]  rxd,
-    input  logic        rx_ctl,
-
-    output logic [15:0] ethertype,
+    input         rst, // act high rst
+    input         rxc,
+    input  [3:0]  rxd,
+    input         rx_ctl,
 
     // FRAME DELIMITER 
-    output logic frame_start,
-    output logic frame_last,
+    output frame_start,
 
-    // PARSED FRAME
-    output logic [7:0] payload_data,
-    output logic payload_valid,
-    output logic [47:0] dest_mac,
-    output logic [47:0] src_mac    
+    // AXI STREAM
+    input tready, // unused, always assumed =1
+    output tlast,
+    output tvalid,
+    output [7:0] tdata,
+
+    // PARSED FRAME INFOs
+    output [15:0] ethertype,
+    output payload_valid,
+    output [47:0] dest_mac,
+    output [47:0] src_mac    
 );
     wire clk125;
     wire [7:0] rx_data;
@@ -50,9 +56,9 @@ module parser_wrapper (
         .rx_er(rx_er),
         .ethertype(ethertype),
         .frame_start(frame_start),
-        .frame_last(frame_last),
-        .payload_data(payload_data),
-        .payload_valid(payload_valid),
+        .frame_last(tlast),
+        .payload_data(tdata),
+        .payload_valid(tvalid),
         .dest_mac(dest_mac),
         .src_mac(src_mac)
     );
