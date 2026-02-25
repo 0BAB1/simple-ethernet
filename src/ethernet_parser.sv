@@ -132,6 +132,7 @@ module ethernet_parser (
     eth_payload_t payload_buffer_s2;
     eth_payload_t payload_buffer_s3;
     eth_payload_t payload_buffer_s4;
+    eth_payload_t payload_buffer_s5;
 
     // 4 BYTES Buffer
     always_ff @( posedge clk125 ) begin : buffer
@@ -140,11 +141,13 @@ module ethernet_parser (
             payload_buffer_s2 <= 0;
             payload_buffer_s3 <= 0;
             payload_buffer_s4 <= 0;
+            payload_buffer_s5 <= 0;
         end else begin
             payload_buffer_s1 <= payload_to_buffer;
             payload_buffer_s2 <= payload_buffer_s1;
             payload_buffer_s3 <= payload_buffer_s2;
             payload_buffer_s4 <= payload_buffer_s3;
+            payload_buffer_s5 <= payload_buffer_s4;
         end
     end
 
@@ -152,15 +155,15 @@ module ethernet_parser (
     // when the buffer detects frame end, it drops out CRC
     always_comb begin
         if(rx_dv && ~rx_er)begin
-            payload_data = payload_buffer_s4.data;
-            payload_valid = payload_buffer_s4.valid;
-            frame_start = payload_buffer_s4.start;
-            frame_last = payload_buffer_s4.last;
+            payload_data = payload_buffer_s5.data;
+            payload_valid = payload_buffer_s5.valid;
+            frame_start = payload_buffer_s5.start;
+            frame_last = payload_buffer_s5.last;
         end else begin
-            payload_data = 0;
-            payload_valid = 0;
+            payload_data = payload_buffer_s5.data;
+            payload_valid = state == PAYLOAD;
             frame_start = 0;
-            frame_last = 1;
+            frame_last = payload_to_buffer.last;
         end
     end
 

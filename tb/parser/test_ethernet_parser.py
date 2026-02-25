@@ -24,7 +24,7 @@ async def test_preamble_detected(dut):
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  # dst MAC (broadcast)
         0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01,  # src MAC
         0x08, 0x00,                          # ethertype IPv4
-    ]) + b"ababab"
+    ]) + b"\xAA\xBB\xCC\xDD\xEE\xFF\x11\x22\x33\x44"
 
     await rgmii_source.send(GmiiFrame.from_payload(raw_data))
 
