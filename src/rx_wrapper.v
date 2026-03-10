@@ -7,7 +7,7 @@
 //
 // BRH 2/2025
 
-module mac_wrapper (
+module rx_wrapper (
     // PHY => RGMII
     input wire        rst, // act high rst
     input wire        rxc,
