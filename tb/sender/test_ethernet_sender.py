@@ -23,21 +23,28 @@ async def test_preamble_detected(dut):
     axis_source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "s_axis"), dut.clk_125, dut.rst)
     dut.dest_mac = 0xABCD01234567
     dut.src_mac = 0xDEADBEEF0000
-    dut.ethertype = 0x0101
+    dut.ethertype = 0x9000
 
     await axis_source.send(b'test data')
     rx_frame = await rgmii_sink.recv()
     print(rx_frame.data)
+    # check CRC to pass
+    assert rx_frame.check_fcs() == True
 
     await axis_source.send(bytearray([0xAE for i in range(150)]))
     rx_frame = await rgmii_sink.recv()
     print(rx_frame.data)
+    # check CRC to pass
+    assert rx_frame.check_fcs() == True
 
-    await axis_source.send(bytearray([0xAE for i in range(5000)]))
+    await axis_source.send(bytearray([0xAE for i in range(50000)]))
     rx_frame = await rgmii_sink.recv()
     print(rx_frame.data)
+    # check CRC to pass
+    assert rx_frame.check_fcs() == True
    
-    for _ in range(100):
+    # keep going to see behavior when data is pushed in.
+    for _ in range(10000):
         await RisingEdge(dut.txc)
 
     cocotb.log.info("OK so far..")

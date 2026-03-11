@@ -4,24 +4,25 @@
 
 // BRH 2/2025
 
-module rx_wrapper (
+module tx_wrapper (
     input wire        rst, // act high rst
     input wire        clk_125,
-    
+    input wire        clk_125_90,
+
     // RGMII TO PHY
     output wire        txc,
     output wire [3:0]  txd,
-    output wire        tx_ctl  
+    output wire        tx_ctl,
 
     // SLAVE AXI STREAM
-    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 interface_axis TDATA" *)
-    input wire [7:0] s_axis_tdata,
-    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 interface_axis TVALID" *)
-    input wire m_axis_tvalid,
-    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 interface_axis TREADY" *)
-    output wire m_axis_tready
-    //clkout
     (* X_INTERFACE_PARAMETER = "FREQ_HZ 125000000" *)
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 s_axis TDATA" *)
+    input wire [7:0] s_axis_tdata,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 s_axis TVALID" *)
+    input wire s_axis_tvalid,
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 s_axis TREADY" *)
+    output wire s_axis_tready,
+    //clkout
     (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 clk125_out CLK" *)
     output wire clk125_out,
 
@@ -50,6 +51,7 @@ module rx_wrapper (
 
     rgmii_tx rgmii_tx_inst (
         .clk_125 (clk_125),
+        .clk_125_90(clk_125_90),
         .rst     (rst),
         .tx_data (tx_data),
         .tx_dv   (tx_dv),

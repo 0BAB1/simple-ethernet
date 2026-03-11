@@ -18,13 +18,14 @@ module rx_wrapper (
     output wire frame_start,
 
     // AXI STREAM
-    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 interface_axis TDATA" *)
+    (* X_INTERFACE_PARAMETER = "FREQ_HZ 125000000" *)
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 m_axis TDATA" *)
     output wire [7:0] m_axis_tdata,
-    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 interface_axis TVALID" *)
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 m_axis TVALID" *)
     output wire m_axis_tvalid,
-    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 interface_axis TREADY" *)
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 m_axis TREADY" *)
     input wire m_axis_tready, // unused, always assumed =1
-    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 interface_axis TLAST" *)
+    (* X_INTERFACE_INFO = "xilinx.com:interface:axis:1.0 m_axis TLAST" *)
     output wire m_axis_tlast,
     //clkout
     (* X_INTERFACE_PARAMETER = "FREQ_HZ 125000000" *)

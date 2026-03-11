@@ -6,6 +6,7 @@
 module rgmii_tx (
     // clock & reset
     input  logic        clk_125,
+    input  logic        clk_125_90,
     input  logic        rst,
 
     // From TX logic
@@ -21,30 +22,26 @@ module rgmii_tx (
 
 /* verilator lint_off MULTIDRIVEN */
 `ifdef SIMULATION
-    // TXC = clk_125 direct
     assign txc = clk_125;
 
-    logic [3:0] d_reg_1;
-    logic [3:0] d_reg_2;
-
     logic [3:0] txd_reg;
+    logic [3:0] d_reg_2;
+    logic       tx_dv_reg;   // ← pipeline tx_dv
+    logic       tx_er_reg;   // ← pipeline tx_er
 
     always @(posedge clk_125) begin
-        d_reg_1 <= tx_data[3:0];
-        d_reg_2 <= tx_data[7:4];
-    end
-    
-    always @(posedge clk_125) begin
-        txd_reg <= tx_data[3:0];
+        txd_reg   <= tx_data[3:0];
+        d_reg_2   <= tx_data[7:4];
+        tx_dv_reg <= tx_dv;        // ← aligné avec txd_reg
+        tx_er_reg <= tx_er;
     end
 
     always @(negedge clk_125) begin
         txd_reg <= d_reg_2;
     end
 
-    assign txd = txd_reg;
-
-    assign tx_ctl  = clk_125 ? tx_dv : (tx_dv ^ tx_er);
+    assign txd     = txd_reg;
+    assign tx_ctl  = clk_125 ? tx_dv_reg : (tx_dv_reg ^ tx_er_reg);
 
 `else
     // --- TXC via ODDR ---
@@ -55,7 +52,7 @@ module rgmii_tx (
         .INIT         (1'b0),
         .SRTYPE       ("SYNC")
     ) u_oddr_txc (
-        .C  (clk_125),
+        .C  (clk_125_90),
         .CE (1'b1),
         .D1 (1'b1),
         .D2 (1'b0),

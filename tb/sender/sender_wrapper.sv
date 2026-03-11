@@ -40,6 +40,7 @@ module sender_wrapper (
 
     rgmii_tx rgmii_tx_inst (
         .clk_125 (clk_125),
+        .clk_125_90(0), // not used in sim
         .rst     (rst),
         .tx_data (tx_data),
         .tx_dv   (tx_dv),

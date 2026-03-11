@@ -93,12 +93,6 @@ module ethernet_sender (
             if(state == PAYLOAD) begin
                 payload_counter <= payload_counter +1;
             end
-
-            if(state == DST_MAC || state == SRC_MAC || 
-                state == ETHERTYPE || state == PAYLOAD) begin
-                crc_reg <= crc32_byte(crc_reg, tx_data);
-            end
-
             if(state == CRC) begin
                 crc_send_counter <= crc_send_counter +1;
             end
@@ -106,6 +100,16 @@ module ethernet_sender (
             if(state == GAP) begin
                 gap_counter <= gap_counter + 1;
             end
+
+            // CRC COMPUTATION LOGIC
+            if(state == DST_MAC)
+                crc_reg <= crc32_byte(crc_reg, dest_mac[47 - mac_counter*8 -: 8]);
+            if(state == SRC_MAC)
+                crc_reg <= crc32_byte(crc_reg, src_mac[47 - mac_counter*8 -: 8]);
+            if(state == ETHERTYPE)
+                crc_reg <= crc32_byte(crc_reg, ethtype_counter ? ethertype[7:0] : ethertype[15:8]);
+            if(state == PAYLOAD)
+                crc_reg <= crc32_byte(crc_reg, s_axis_tvalid ? s_axis_tdata : 8'h00);
         end
     end
 
@@ -151,7 +155,7 @@ module ethernet_sender (
             SRC_MAC : begin
                 tx_dv = 1;
                 tx_er = 0;
-                tx_data = dest_mac[47 - mac_counter*8 -: 8];
+                tx_data = src_mac[47 - mac_counter*8 -: 8];
 
                 if(mac_counter == 5) next_state = ETHERTYPE;
             end
@@ -159,7 +163,7 @@ module ethernet_sender (
             ETHERTYPE : begin
                 tx_dv = 1;
                 tx_er = 0;
-                tx_data = ethtype_counter ? ethertype[15:8] : ethertype[7:0];
+                tx_data = ethtype_counter ? ethertype[7:0] : ethertype[15:8];
                 
                 if(ethtype_counter == 1) next_state = PAYLOAD;
             end
@@ -170,18 +174,15 @@ module ethernet_sender (
                 tx_dv = 1;
 
                 if(s_axis_tvalid == 0 && (payload_counter >= min_payload_size-1)) next_state = CRC;
-
-                // to pad, we stay in that state but send 0 (todo: add solid padding state but that should work just fine)
-                if(s_axis_tvalid == 0 && (payload_counter < min_payload_size-1)) begin
-                    next_state = PAYLOAD;
-                    tx_data = 0;
-                end
-
                 if(payload_counter == max_payload_size -1) next_state = CRC;
+
+                // auto padding//(todo: add solid padding state but that should work just fine)
+                if(s_axis_tvalid == 0) tx_data = 0;
             end
 
             CRC : begin
-                tx_data = crc_reg[crc_send_counter*8 +: 8];
+                tx_data = ~crc_reg[crc_send_counter*8 +: 8];
+                tx_dv = 1;
 
                 if(crc_send_counter == 3) next_state = GAP;
             end
@@ -218,5 +219,5 @@ function automatic [31:0] crc32_byte(
             crc = crc >> 1;
         d = d >> 1;
     end
-    return ~crc;
+    return crc;
 endfunction
