@@ -42,7 +42,7 @@ module ethernet_sender (
     logic [$clog2(1500) -1 : 0] payload_counter;
     logic [31:0] crc_reg;
     logic [$clog2(4)-1:0] crc_send_counter;
-    logic [$clog2(12)-1:0] gap_counter;
+    logic [$clog2(8*12)-1:0] gap_counter; //96 cycles
 
     always_ff @( posedge clk125 ) begin
         if(~rst_n)begin
@@ -190,7 +190,7 @@ module ethernet_sender (
             GAP : begin
                 tx_dv = 0;
                 tx_er = 0;
-                if(gap_counter == 11) next_state = IDLE;
+                if(gap_counter == 95) next_state = IDLE;
             end
 
             default : ;

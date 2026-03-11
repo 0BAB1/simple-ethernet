@@ -50,7 +50,7 @@ module rgmii_tx (
     ODDR #(
         .DDR_CLK_EDGE ("SAME_EDGE"),
         .INIT         (1'b0),
-        .SRTYPE       ("SYNC")
+        .SRTYPE       ("ASYNC")
     ) u_oddr_txc (
         .C  (clk_125_90),
         .CE (1'b1),
@@ -70,7 +70,7 @@ module rgmii_tx (
             ODDR #(
                 .DDR_CLK_EDGE ("SAME_EDGE"),
                 .INIT         (1'b0),
-                .SRTYPE       ("SYNC")
+                .SRTYPE       ("ASYNC")
             ) u_oddr_txd (
                 .C  (clk_125),
                 .CE (1'b1),
@@ -89,7 +89,7 @@ module rgmii_tx (
     ODDR #(
         .DDR_CLK_EDGE ("SAME_EDGE"),
         .INIT         (1'b0),
-        .SRTYPE       ("SYNC")
+        .SRTYPE       ("ASYNC")
     ) u_oddr_txctl (
         .C  (clk_125),
         .CE (1'b1),
