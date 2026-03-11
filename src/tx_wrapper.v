@@ -1,10 +1,7 @@
-// used in vivado to wraper arround rgmii_rx and the parder
-// Takes in RGMII signals from PHY and output all the frame infos + AXI STREAM for data
+// used in vivado to wraper arround rgmii_tx and the sender
+// resulting in only slave AXIS + metadata exposed on the SoC side
+// and RGMII on the PHY side
 
-// this wraps the rgmii_rx AND parser.
-// That allows to use cocotb ext eth frames
-// fror testing directly
-//
 // BRH 2/2025
 
 module rx_wrapper (
