@@ -30,7 +30,6 @@ module ethernet_sender (
         SRC_MAC,
         ETHERTYPE,
         PAYLOAD,
-        //PADDING,
         CRC,
         GAP
     } eth_tx_state;
@@ -42,7 +41,24 @@ module ethernet_sender (
     logic [$clog2(1500) -1 : 0] payload_counter;
     logic [31:0] crc_reg;
     logic [$clog2(4)-1:0] crc_send_counter;
-    logic [$clog2(8*12)-1:0] gap_counter; //96 cycles
+    logic [$clog2(8*12)-1:0] gap_counter;
+
+    // ─── ILA ────────────────────────────────────────────────────────────────
+    `ifndef SIMULATION
+        u_ila_wrapper u_ila_wrapper (
+            .clk    (clk125),
+            .probe0 (state),              // [3:0]  état FSM
+            .probe1 (tx_data),            // [7:0]  donnée envoyée
+            .probe2 (tx_dv),              // [0:0]  data valid
+            .probe3 (tx_er),              // [0:0]  error
+            .probe4 (crc_reg),            // [31:0] CRC en cours
+            .probe5 (crc_send_counter),   // [1:0]  compteur CRC
+            .probe6 (s_axis_tvalid),      // [0:0]  AXI valid
+            .probe7 (s_axis_tdata),       // [7:0]  AXI data
+            .probe8 (payload_counter)     // [10:0] compteur payload
+        );
+    `endif
+    // ────────────────────────────────────────────────────────────────────────
 
     always_ff @( posedge clk125 ) begin
         if(~rst_n)begin
@@ -70,6 +86,7 @@ module ethernet_sender (
 
             if(state == IDLE) begin
                 crc_reg <= 32'hFFFFFFFF;
+                payload_counter <= 0;
             end
 
             if(state == PREAMBLE)begin
@@ -88,17 +105,21 @@ module ethernet_sender (
 
             if(state == ETHERTYPE) begin
                 ethtype_counter <=  ethtype_counter + 1;
+                payload_counter <= 0;
             end
 
             if(state == PAYLOAD) begin
                 payload_counter <= payload_counter +1;
             end
+
             if(state == CRC) begin
                 crc_send_counter <= crc_send_counter +1;
+                payload_counter <= 0;
             end
 
             if(state == GAP) begin
                 gap_counter <= gap_counter + 1;
+                payload_counter <= 0;
             end
 
             // CRC COMPUTATION LOGIC
@@ -114,17 +135,14 @@ module ethernet_sender (
     end
 
     always_comb begin
-        // defaults
         tx_er = 0;
         tx_dv = 0;
         tx_data = 0;
         next_state = state;
         s_axis_tready = 0;
 
-        // comb FSM logic
         case (state)
             IDLE : begin
-
                 if(s_axis_tvalid) next_state = PREAMBLE;
             end
 
@@ -148,7 +166,6 @@ module ethernet_sender (
                 tx_dv = 1;
                 tx_er = 0;
                 tx_data = dest_mac[47 - mac_counter*8 -: 8];
-
                 if(mac_counter == 5) next_state = SRC_MAC;
             end
 
@@ -156,7 +173,6 @@ module ethernet_sender (
                 tx_dv = 1;
                 tx_er = 0;
                 tx_data = src_mac[47 - mac_counter*8 -: 8];
-
                 if(mac_counter == 5) next_state = ETHERTYPE;
             end
 
@@ -164,7 +180,6 @@ module ethernet_sender (
                 tx_dv = 1;
                 tx_er = 0;
                 tx_data = ethtype_counter ? ethertype[7:0] : ethertype[15:8];
-                
                 if(ethtype_counter == 1) next_state = PAYLOAD;
             end
 
@@ -172,18 +187,14 @@ module ethernet_sender (
                 s_axis_tready = 1;
                 tx_data = s_axis_tdata;
                 tx_dv = 1;
-
                 if(s_axis_tvalid == 0 && (payload_counter >= min_payload_size-1)) next_state = CRC;
                 if(payload_counter == max_payload_size -1) next_state = CRC;
-
-                // auto padding//(todo: add solid padding state but that should work just fine)
                 if(s_axis_tvalid == 0) tx_data = 0;
             end
 
             CRC : begin
                 tx_data = ~crc_reg[crc_send_counter*8 +: 8];
                 tx_dv = 1;
-
                 if(crc_send_counter == 3) next_state = GAP;
             end
 
@@ -196,14 +207,12 @@ module ethernet_sender (
             default : ;
         endcase
 
-        // by default, when sending a frame, if valid drops, we enter the error state.
         if(~s_axis_tvalid && (state != IDLE) && (state != PAYLOAD) && (state != ERROR) && state != (CRC) && state != (GAP)) next_state = ERROR;
     end
 
 endmodule
 
 
-// crc compute function
 function automatic [31:0] crc32_byte(
     input [31:0] crc_in,
     input [7:0]  data

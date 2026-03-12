@@ -32,6 +32,22 @@ set_property PACKAGE_PIN K30 [get_ports txc]
 
 set_property IOSTANDARD LVCMOS25 [get_ports {txd[*] tx_ctl txc}]
 
+create_generated_clock -name txc_clk \
+    -source [get_pins design_1_i/tx_wrapper_0/inst/rgmii_tx_inst/u_oddr_txc/Q] \
+    -divide_by 1 \
+    [get_ports txc]
+
+# Delay constraints.
+set_output_delay -clock txc_clk -max  1.2 -rise_cloyck [get_ports {txd[*]}]
+set_output_delay -clock txc_clk -min -1.2 -rise_clock [get_ports {txd[*]}]
+set_output_delay -clock txc_clk -max  1.2 -fall_clock [get_ports {txd[*]}]
+set_output_delay -clock txc_clk -min -1.2 -fall_clock [get_ports {txd[*]}]
+
+set_output_delay -clock txc_clk -max  1.2 -rise_clock [get_ports tx_ctl]
+set_output_delay -clock txc_clk -min -1.2 -rise_clock [get_ports tx_ctl]
+set_output_delay -clock txc_clk -max  1.2 -fall_clock [get_ports tx_ctl]
+set_output_delay -clock txc_clk -min -1.2 -fall_clock [get_ports tx_ctl]
+
 ################################
 # MISC
 ################################
