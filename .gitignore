@@ -3,3 +3,8 @@ __pycache__
 results.xml
 dump.vcd
 vivado-project
+HOLY_CORE_COURSE
+.Xil
+*.jou
+*.log
+*.str

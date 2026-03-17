@@ -1,3 +1,9 @@
+################################################################
+################################################################
+############### ETHERNET CONSTRAINTS ###########################
+################################################################
+################################################################
+
 ################################
 # FROM PHY RX
 ################################
@@ -38,7 +44,8 @@ create_generated_clock -name txc_clk \
     [get_ports txc]
 
 # Delay constraints.
-set_output_delay -clock txc_clk -max  1.2 -rise_cloyck [get_ports {txd[*]}]
+# (looks like vivado don't get it, todo : make it better)
+set_output_delay -clock txc_clk -max  1.2 -rise_clock [get_ports {txd[*]}]
 set_output_delay -clock txc_clk -min -1.2 -rise_clock [get_ports {txd[*]}]
 set_output_delay -clock txc_clk -max  1.2 -fall_clock [get_ports {txd[*]}]
 set_output_delay -clock txc_clk -min -1.2 -fall_clock [get_ports {txd[*]}]
@@ -55,3 +62,25 @@ set_output_delay -clock txc_clk -min -1.2 -fall_clock [get_ports tx_ctl]
 # PHY RESETN
 set_property PACKAGE_PIN L20 [get_ports PHY_resetn]
 set_property IOSTANDARD LVCMOS25 [get_ports {PHY_resetn}]
+
+################################################################
+################################################################
+############### HOLY CORE CONSTRAINTS ##########################
+################################################################
+################################################################
+
+# resets -> 4sw DIP SWITCH is used.
+# SW#1 (next to the "1" marker) is CPU RESET (pin Y28, name SW3)
+# SW#2 (next to the "1" marker) is PERIPH. RESET (pin AA28, name SW2)
+set_property PACKAGE_PIN Y28 [get_ports rst_n]
+set_property PACKAGE_PIN AA28 [get_ports periph_rst_n]
+set_property IOSTANDARD LVCMOS25 [get_ports {rst_n periph_rst_n}]
+
+# main sys clock
+set_property PACKAGE_PIN A12 [get_ports sys_diff_clock_p]
+set_property PACKAGE_PIN A11 [get_ports sys_diff_clock_n]
+set_property IOSTANDARD LVDS [get_ports {sys_diff_clock_p sys_diff_clock_n}]
+
+set_property PACKAGE_PIN AD12 [get_ports sys_diff_clock_clk_p]
+set_property PACKAGE_PIN AD11 [get_ports sys_diff_clock_clk_n]
+set_property IOSTANDARD LVDS [get_ports {sys_diff_clock_clk_p sys_diff_clock_clk_n}]
