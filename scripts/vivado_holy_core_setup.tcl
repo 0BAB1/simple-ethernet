@@ -223,14 +223,6 @@ copy_bd_objs /  [get_bd_cells {xlconstant_0}]
 connect_bd_net [get_bd_pins xlconstant_1/dout] [get_bd_pins top_0/trst_ni]
 # ---------
 
-################################################
-# ETHERNET RELATED
-################################################
-
-################################################
-# Final setup
-################################################
-
 # ---------
 # MISC ADJUSTMENTS
 # Const no intr
@@ -242,8 +234,146 @@ set_property -dict [list \
 connect_bd_net [get_bd_pins xlconstant_2/dout] [get_bd_pins top_0/irq_in]
 # ---------
 
+################################################
+# ETHERNET RELATED
+################################################
+
+add_files -norecurse {
+  /home/deos/hu.babin-riby/Documents/Code/simple-ethernet/src/rgmii_rx_wrapper.v
+  /home/deos/hu.babin-riby/Documents/Code/simple-ethernet/src/ethernet_parser.sv
+  /home/deos/hu.babin-riby/Documents/Code/simple-ethernet/src/rgmii_rx.sv
+  /home/deos/hu.babin-riby/Documents/Code/simple-ethernet/src/rgmii_tx.sv
+  /home/deos/hu.babin-riby/Documents/Code/simple-ethernet/src/ethernet_sender.sv
+  /home/deos/hu.babin-riby/Documents/Code/simple-ethernet/src/tx_wrapper.v
+  /home/deos/hu.babin-riby/Documents/Code/simple-ethernet/src/rx_wrapper.v
+}
+
+# ---------
+# RX SIDE
+create_bd_cell -type module -reference rx_wrapper rx_wrapper_0
+make_bd_pins_external  [get_bd_pins rx_wrapper_0/rxc] [get_bd_pins rx_wrapper_0/rxd] [get_bd_pins rx_wrapper_0/rx_ctl]
+set_property name rxc [get_bd_ports rxc_0]
+set_property name rxd [get_bd_ports rxd_0]
+set_property name rx_ctl [get_bd_ports rx_ctl_0]
+# ---------
+
+# ---------
+# TX SIDE
+create_bd_cell -type module -reference tx_wrapper tx_wrapper_0
+make_bd_pins_external  [get_bd_pins tx_wrapper_0/txc] [get_bd_pins tx_wrapper_0/txd] [get_bd_pins tx_wrapper_0/tx_ctl]
+set_property name txc [get_bd_ports txc_0]
+set_property name txd [get_bd_ports txd_0]
+set_property name tx_ctl [get_bd_ports tx_ctl_0]
+# ---------
+
+# ---------
+# reset
+copy_bd_objs /  [get_bd_cells {util_vector_logic_0}]
+connect_bd_net [get_bd_pins util_vector_logic_1/Op1] [get_bd_pins proc_sys_reset_0/peripheral_aresetn]
+connect_bd_net [get_bd_pins util_vector_logic_1/Res] [get_bd_pins rx_wrapper_0/rst]
+connect_bd_net [get_bd_pins tx_wrapper_0/rst] [get_bd_pins util_vector_logic_1/Res]
+# ---------
+
+# ---------
+# 125 MHz CLK
+set_property -dict [list \
+  CONFIG.CLKOUT1_JITTER {148.629} \
+  CONFIG.CLKOUT1_PHASE_ERROR {89.971} \
+  CONFIG.CLKOUT2_JITTER {107.523} \
+  CONFIG.CLKOUT2_PHASE_ERROR {89.971} \
+  CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {125} \
+  CONFIG.CLKOUT2_USED {true} \
+  CONFIG.CLKOUT3_JITTER {107.523} \
+  CONFIG.CLKOUT3_PHASE_ERROR {89.971} \
+  CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {125} \
+  CONFIG.CLKOUT3_REQUESTED_PHASE {90} \
+  CONFIG.CLKOUT3_USED {true} \
+  CONFIG.CLK_OUT2_PORT {clk125} \
+  CONFIG.CLK_OUT3_PORT {clk125_90} \
+  CONFIG.MMCM_CLKFBOUT_MULT_F {5.000} \
+  CONFIG.MMCM_CLKOUT0_DIVIDE_F {40.000} \
+  CONFIG.MMCM_CLKOUT1_DIVIDE {8} \
+  CONFIG.MMCM_CLKOUT2_DIVIDE {8} \
+  CONFIG.MMCM_CLKOUT2_PHASE {90.000} \
+  CONFIG.MMCM_DIVCLK_DIVIDE {1} \
+  CONFIG.NUM_OUT_CLKS {3} \
+] [get_bd_cells holy_core_only_clk_gen]
+# ---------
+
+# ---------
+# Ethernet TX constants
+create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_3
+copy_bd_objs /  [get_bd_cells {xlconstant_3}]
+copy_bd_objs /  [get_bd_cells {xlconstant_3}]
+set_property -dict [list \
+  CONFIG.CONST_VAL {0x9000} \
+  CONFIG.CONST_WIDTH {16} \
+] [get_bd_cells xlconstant_3]
+set_property -dict [list \
+  CONFIG.CONST_VAL {0xFFFFFFFFFFFF} \
+  CONFIG.CONST_WIDTH {48} \
+] [get_bd_cells xlconstant_4]
+set_property -dict [list \
+  CONFIG.CONST_VAL {0xDEADBEEF0001} \
+  CONFIG.CONST_WIDTH {48} \
+] [get_bd_cells xlconstant_5]
+connect_bd_net [get_bd_pins xlconstant_5/dout] [get_bd_pins tx_wrapper_0/src_mac]
+connect_bd_net [get_bd_pins xlconstant_4/dout] [get_bd_pins tx_wrapper_0/dest_mac]
+connect_bd_net [get_bd_pins xlconstant_3/dout] [get_bd_pins tx_wrapper_0/ethertype]
+# ---------
+
+# ---------
+# PHY RESET
+delete_bd_objs [get_bd_nets holy_core_only_clk_gen_locked]
+make_bd_pins_external  [get_bd_pins holy_core_only_clk_gen/locked]
+set_property name PHY_resetn [get_bd_ports locked_0]
+# reconnect to proc system reset gen
+connect_bd_net [get_bd_pins proc_sys_reset_0/dcm_locked] [get_bd_pins holy_core_only_clk_gen/locked]
+# ---------
+
+# ---------
+# ADD DMA CORE
+create_bd_cell -type ip -vlnv xilinx.com:ip:axi_dma:7.1 axi_dma_0
+set_property -dict [list \
+  CONFIG.c_include_sg {0} \
+  CONFIG.c_mm2s_burst_size {64} \
+  CONFIG.c_s2mm_burst_size {64} \
+] [get_bd_cells axi_dma_0]
+set_property CONFIG.NUM_MI {6} [get_bd_cells smartconnect_0]
+connect_bd_intf_net [get_bd_intf_pins smartconnect_0/M05_AXI] [get_bd_intf_pins axi_dma_0/S_AXI_LITE]
+# clocking (125 related)
+set_property CONFIG.NUM_CLKS {2} [get_bd_cells smartconnect_0]
+connect_bd_intf_net [get_bd_intf_pins axi_dma_0/S_AXIS_S2MM] [get_bd_intf_pins rx_wrapper_0/m_axis]
+connect_bd_intf_net [get_bd_intf_pins tx_wrapper_0/s_axis] [get_bd_intf_pins axi_dma_0/M_AXIS_MM2S]
+connect_bd_net [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins holy_core_only_clk_gen/clk_25]
+connect_bd_net [get_bd_pins smartconnect_0/aclk1] [get_bd_pins axi_dma_0/m_axi_mm2s_aclk]
+connect_bd_net [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins smartconnect_0/aclk1]
+connect_bd_net [get_bd_pins holy_core_only_clk_gen/clk125] [get_bd_pins smartconnect_0/aclk1]
+connect_bd_net [get_bd_pins tx_wrapper_0/clk_125] [get_bd_pins holy_core_only_clk_gen/clk125]
+connect_bd_net [get_bd_pins holy_core_only_clk_gen/clk125_90] [get_bd_pins tx_wrapper_0/clk_125_90]
+# Connect AXIS
+connect_bd_intf_net [get_bd_intf_pins axi_dma_0/S_AXIS_S2MM] [get_bd_intf_pins rx_wrapper_0/m_axis]
+connect_bd_intf_net [get_bd_intf_pins tx_wrapper_0/s_axis] [get_bd_intf_pins axi_dma_0/M_AXIS_MM2S]
+# Connect axi masters
+set_property CONFIG.NUM_SI {3} [get_bd_cells smartconnect_0]
+connect_bd_intf_net [get_bd_intf_pins axi_dma_0/M_AXI_MM2S] [get_bd_intf_pins smartconnect_0/S01_AXI]
+connect_bd_intf_net [get_bd_intf_pins axi_dma_0/M_AXI_S2MM] [get_bd_intf_pins smartconnect_0/S02_AXI]
+# rst
+connect_bd_net [get_bd_pins axi_dma_0/axi_resetn] [get_bd_pins proc_sys_reset_0/interconnect_aresetn]
+# ---------
+
+# ---------
+# MISC Adjustements
+set_property CONFIG.c_m_axis_mm2s_tdata_width {8} [get_bd_cells axi_dma_0]
+# ---------
+
+################################################
+# Final setup
+################################################
+
 # ---------
 # Assign SoC adresses, for this part, I'm using hc_lib/holy_core_soc.h taht contains some defaults addresses
+# HOLY CORE MASTER
 assign_bd_address
 # BRAMs
 set_property offset 0x80000000 [get_bd_addr_segs {top_0/m_axi_lite/SEG_axi_bram_ctrl_0_Mem0}]
@@ -253,6 +383,19 @@ set_property offset 0x80004000 [get_bd_addr_segs {top_0/m_axi_lite/SEG_axi_bram_
 set_property offset 0x10010000 [get_bd_addr_segs {top_0/m_axi_lite/SEG_axi_gpio_0_Reg}]
 # UART
 set_property offset 0x10000000 [get_bd_addr_segs {top_0/m_axi_lite/SEG_axi_uartlite_0_Reg}]
+# DMA AXI LITE
+set_property offset 0x10040000 [get_bd_addr_segs {top_0/m_axi_lite/SEG_axi_dma_0_Reg}]
+# ---------
+# DMA MASTERs
+assign_bd_address
+# BRAMs
+set_property offset 0x80000000 [get_bd_addr_segs {axi_dma_0/Data_MM2S/SEG_axi_bram_ctrl_0_Mem0}]
+set_property offset 0x80002000 [get_bd_addr_segs {axi_dma_0/Data_MM2S/SEG_axi_bram_ctrl_1_Mem0}]
+set_property offset 0x80004000 [get_bd_addr_segs {axi_dma_0/Data_MM2S/SEG_axi_bram_ctrl_2_Mem0}]
+#
+set_property offset 0x80000000 [get_bd_addr_segs {axi_dma_0/Data_S2MM/SEG_axi_bram_ctrl_0_Mem0}]
+set_property offset 0x80002000 [get_bd_addr_segs {axi_dma_0/Data_S2MM/SEG_axi_bram_ctrl_1_Mem0}]
+set_property offset 0x80004000 [get_bd_addr_segs {axi_dma_0/Data_S2MM/SEG_axi_bram_ctrl_2_Mem0}]
 # ---------
 
 make_wrapper -files [get_files /tmp/HC_ETHERNET/holy_soc_project.srcs/sources_1/bd/design_1/design_1.bd] -top

@@ -44,20 +44,20 @@ module ethernet_sender (
     logic [$clog2(8*12)-1:0] gap_counter;
 
     // ─── ILA ────────────────────────────────────────────────────────────────
-    `ifndef SIMULATION
-        u_ila_wrapper u_ila_wrapper (
-            .clk    (clk125),
-            .probe0 (state),              // [3:0]  état FSM
-            .probe1 (tx_data),            // [7:0]  donnée envoyée
-            .probe2 (tx_dv),              // [0:0]  data valid
-            .probe3 (tx_er),              // [0:0]  error
-            .probe4 (crc_reg),            // [31:0] CRC en cours
-            .probe5 (crc_send_counter),   // [1:0]  compteur CRC
-            .probe6 (s_axis_tvalid),      // [0:0]  AXI valid
-            .probe7 (s_axis_tdata),       // [7:0]  AXI data
-            .probe8 (payload_counter)     // [10:0] compteur payload
-        );
-    `endif
+    // `ifndef SIMULATION
+    //     u_ila_wrapper u_ila_wrapper (
+    //         .clk    (clk125),
+    //         .probe0 (state),              // [3:0]  état FSM
+    //         .probe1 (tx_data),            // [7:0]  donnée envoyée
+    //         .probe2 (tx_dv),              // [0:0]  data valid
+    //         .probe3 (tx_er),              // [0:0]  error
+    //         .probe4 (crc_reg),            // [31:0] CRC en cours
+    //         .probe5 (crc_send_counter),   // [1:0]  compteur CRC
+    //         .probe6 (s_axis_tvalid),      // [0:0]  AXI valid
+    //         .probe7 (s_axis_tdata),       // [7:0]  AXI data
+    //         .probe8 (payload_counter)     // [10:0] compteur payload
+    //     );
+    // `endif
     // ────────────────────────────────────────────────────────────────────────
 
     always_ff @( posedge clk125 ) begin
