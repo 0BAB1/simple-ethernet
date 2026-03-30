@@ -16,7 +16,9 @@ module ethernet_sender (
     // to RGMII TX
     output logic [7:0] tx_data,
     output logic tx_dv,
-    output logic tx_er
+    output logic tx_er,
+
+    input logic start_send
 );
 
     localparam min_payload_size = 64;
@@ -143,7 +145,7 @@ module ethernet_sender (
 
         case (state)
             IDLE : begin
-                if(s_axis_tvalid) next_state = PREAMBLE;
+                if(start_send) next_state = PREAMBLE;
             end
 
             ERROR : begin

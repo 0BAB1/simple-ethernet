@@ -26,6 +26,9 @@ module tx_wrapper (
     (* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 clk125_out CLK" *)
     output wire clk125_out,
 
+    // Start_send signal
+    input wire start_send,
+
     // FRAME METADATA
     input wire [15:0] ethertype,
     input wire [47:0] dest_mac,
@@ -46,7 +49,8 @@ module tx_wrapper (
         .ethertype    (ethertype),
         .tx_data      (tx_data),
         .tx_dv        (tx_dv),
-        .tx_er        (tx_er)
+        .tx_er        (tx_er),
+        .start_send(start_send)
     );
 
     rgmii_tx rgmii_tx_inst (

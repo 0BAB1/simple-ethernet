@@ -14,6 +14,9 @@ module rx_wrapper (
     input wire [3:0]  rxd,
     input wire        rx_ctl,
 
+    // i delaye ref
+    input wire clk200,
+
     // FRAME DELIMITER 
     output wire frame_start,
 
@@ -51,7 +54,8 @@ module rx_wrapper (
         .clk_125(clk125),
         .rx_data(rx_data),
         .rx_dv(rx_dv),
-        .rx_er(rx_er)
+        .rx_er(rx_er),
+        .clk200(clk200)
     );
 
     wire rst_n = ~rst;
